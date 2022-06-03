@@ -28,6 +28,7 @@ sd.n <- function(array) {
 # }
 
 # make symmetric matrix?
+# replace function dist
 pairwise.distance <- function(X) {
   n <- nrow(X)
   adj <- matrix(,nrow = n, ncol=n)
@@ -80,7 +81,8 @@ calculate.adj.matrix <- function(x, y, x_pixel = NULL, y_pixel = NULL, image = N
     cat("Calculating adj matrix using xy only...")
     mat <- as.data.frame(cbind(x, y))
   }
-  return(pairwise.distance(mat))
+  adj <- as.matrix(dist(mat, method = "euclidean", diag = TRUE, upper = TRUE))
+  return(adj)
 }
 
 

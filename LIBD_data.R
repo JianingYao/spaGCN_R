@@ -130,16 +130,17 @@ adj <- calculate.adj.matrix(x=x_pixel,
 
 # 2. Spatial domain detection
 # 2.1 Expression data processing
-adj <- read.csv("adj.csv", header = TRUE)
+# adj <- read.csv("adj.csv", header = TRUE)
 #filter genes; PYTHON: scanpy filter: min cells, max cells, min counts, max counts
 #exclude genes expressed in fewer than three spots
 per.gene <- perFeatureQCMetrics(spaData)
 discard <- per.gene$mean*dim(spaData)[2] < 3
 spaData <- spaData[!discard,]
 #exclude special genes: ERCC, MT
-is.ERCC <- grep("ERCC", rownames(spaData))
-is.mito <- grep("MT-", rownames(spaData))
-spaData <- spaData[!is.ERCC | !is.mito,]
+is.ERCC <- base::grepl("ERCC", rownames(spaData))
+is.mito <- base::grepl("MT-", rownames(spaData))
+spaData <- spaData[!is.ERCC,]
+spaData <- spaData[!is.mito,]
 #normalize and take log for UMI (exist in spatialLIBD)
 # set.seed(100)
 # cluster <- quickCluster(spaData) 
@@ -158,9 +159,11 @@ l <- search.l(p, adj, start = 0.01, end = 1000, tol = 0.01, max.run = 100)
 # res: resolution in the initial Louvain's clustering methods. If the number of clusters is known, use search.res() function to search for suitable resolution
 # For 151673 slice, set the number of clusters = 7 since this tissue has 7 layers
 n.clusters <- 7
-set.seed(123)
+seed=100
 # Search for suitable resolution
-res <- search.res(spaData, adj, l, n.clusters, start = 0.7, step = 0.1, tol = 5e-3, lr = 0.05, max.epochs = 2)
+res <- search.res(spaData, adj, l, n.clusters, 
+                  start = 0.7, step = 0.1, tol = 5e-3, lr = 0.05, 
+                  max.epochs = 20, seed = seed)
 
 
 

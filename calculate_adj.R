@@ -89,4 +89,3 @@ calculate.adj.matrix <- function(x, y, x_pixel = NULL, y_pixel = NULL, image = N
 
 
 
-

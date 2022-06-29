@@ -52,16 +52,19 @@ search.l <- function(p, adj, start=0.01, end=1000, tol=0.01, max.run=100){
 }
 
 
-
-search.res <- function(spaData, adj, l, target.num, 
-                       start = 0.4, step = 0.1, tol = 5e-3, lr = 0.05, 
+search.res <- function(spaData, adj, l, target.num,
+                       start = 0.4, step = 0.1, tol = 5e-3, lr = 0.05,
                        max.epochs = 10, seed = 100, max.run = 10){
   set.seed(seed)
   res <- start
   cat(paste0("Start at res = ", res, " step = ", step))
-  spaGCN.train(spaData, adj, init.spa = TRUE, init = "louvain", 
-               res = res, tol = tol, lr = lr, max.epochs = max.epochs, l = l)
-  
+  clf <- spaGCN(spaData, adj, init.spa = TRUE, init = "louvain",
+                res = res, tol = tol, lr = lr, max.epochs = max.epochs)
+  clf <- set_l(clf, l)
+
+  # spaGCN_train(spaData, adj, init.spa = TRUE, init = "louvain",
+  #              res = res, tol = tol, lr = lr, max.epochs = max.epochs, l = l)
+
 }
 
 

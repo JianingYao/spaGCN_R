@@ -7,6 +7,7 @@ library(foreach)
 library(doParallel)
 library(scran)
 library(scuttle)
+library(ggspavis)
 source("../calculate_adj.R")
 
 ## Connect to ExperimentHub

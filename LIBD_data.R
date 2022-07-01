@@ -138,6 +138,7 @@ per.gene <- perFeatureQCMetrics(spaData)
 discard <- per.gene$mean*dim(spaData)[2] < 3
 spaData <- spaData[!discard,]
 #exclude special genes: ERCC, MT
+# rowData(spadata) --> gene_biotype, only protein_coding
 is.ERCC <- base::grepl("ERCC", rownames(spaData))
 is.mito <- base::grepl("MT-", rownames(spaData))
 spaData <- spaData[!is.ERCC,]

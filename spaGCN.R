@@ -5,6 +5,9 @@ library(torch)
 
 source("../models.R")
 
+
+####REVISE DIM IN TORCH
+
 spaGCN <- function(spaData, 
                    adj, 
                    num.pcs = 50, 
@@ -36,7 +39,8 @@ spaGCN <- function(spaData,
                  tol = tol,
                  l = l, 
                  adj.exp = adj.exp,
-                 model = model),
+                 model = model, 
+                 embed = NULL),
                  class = "spaGCN")
 }
 
@@ -55,6 +59,7 @@ train.spaGCN <- function(clf) {
 
   clf$spaData <- runPCA(clf$spaData, exprs_values = "logcounts", ncomponents = 50,scale = TRUE)
   embed <- reducedDim(clf$spaData, "PCA")
+  clf$embed <- embed
   if (is.null(clf$l)){
     stop("l should be set before fitting the model")
   }
@@ -70,7 +75,13 @@ train.spaGCN <- function(clf) {
 
 
 predict.spaGCN <- function(clf){
-  
+  mylist = clf$model$predict(clf$embed, clf$adj.exp)
+  z = mylist$x
+  q = mylist$q
+  y_pred = as.array(torch_max(z, dim = 1)$data()$cpu())
+  prob = as.array(q)
+  mylist = list("y_pred" = y_pred, "prob" = prob)
+  return(mylist)
 }
   
 

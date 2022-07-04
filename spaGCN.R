@@ -71,6 +71,7 @@ train.spaGCN <- function(clf) {
                 weight_decay = clf$weight.decay, opt = clf$opt, init_spa = clf$init.spa,
                 init = clf$init, n_neighbors = clf$n.neighbors, n_clusters = clf$n.clusters, 
                 res = clf$res, tol = clf$tol)
+  invisible(clf)
 }
 
 

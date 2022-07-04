@@ -61,10 +61,39 @@ search.res <- function(spaData, adj, l, target.num,
   clf <- spaGCN(spaData, adj, init.spa = TRUE, init = "louvain",
                 res = res, tol = tol, lr = lr, max.epochs = max.epochs)
   clf <- set_l(clf, l)
-
-  # spaGCN_train(spaData, adj, init.spa = TRUE, init = "louvain",
-  #              res = res, tol = tol, lr = lr, max.epochs = max.epochs, l = l)
-
+  clf <- train.spaGCN(clf)
+  pred <- predict.spaGCN(clf)
+  y_pred <- pred$y_pred
+  old.num <- length(unique(y_pred))
+  run <- 0
+  while (old.num != target_num) {
+    set.seed(100)
+    old.sign <- ifelse(old.num < target.num, 1, -1)
+    clf <- spaGCN(spaData, adj, init.spa = TRUE, init = "louvain",
+                  res = res+step*old.sign, tol = tol, lr = lr, max.epochs = max.epochs)
+    clf <- set_l(clf, l)
+    clf <- train.spaGCN(clf)
+    pred <- predict.spaGCN(clf)
+    y_pred <- pred$y_pred
+    new.num <- length(unique(y_pred))
+    cat("Res = ", res+step*old.sign, "Num of clusters = ", new.num)
+    if (new.num == target.num){
+      res = res+step*old.sign
+      cat("Recommended res = ", res)
+      return(res)
+    } else {
+      step = step/2
+      cat("step changed to ", step)
+    }
+    if (run > max.run){
+      cat("Exact resolution not found")
+      cat("Recommended res = ", res)
+      return(res)
+    }
+    run <- run + 1
+  }
+  cat("Recommended res = ", res)
+  return(res)
 }
 
 

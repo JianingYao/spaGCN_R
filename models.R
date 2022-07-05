@@ -5,9 +5,6 @@ library(bluster)
 library(tidyverse)
 
 
-####DIM arguments python to r
-# https://towardsdatascience.com/understanding-dimensions-in-pytorch-6edf9972d3be 
-
 
 simple_GC_DEC <- nn_module(
   initialize = function(nfeat, nhid, alpha = 0.2){
@@ -18,21 +15,21 @@ simple_GC_DEC <- nn_module(
   
   forward = function(x, adj){
     x = self$gc(x, adj)
-    q = 1/((1+torch_sum((x$unsqueenz(1)-self$mu)^2, dim = 2)/self$alpha) + 1e-08)
+    q = 1/((1+torch_sum((x$unsqueeze(2)-self$mu)^2, dim = 3)/self$alpha) + 1e-08)
     q = q^(self$alpha+1)/2
-    q = q/torch_sum(q, dim = 1, keepdim = TRUE)
+    q = q/torch_sum(q, dim = 2, keepdim = TRUE)
     mylist = list("x" = x, "q" = q)
     return(mylist)
   },
   
   loss_function = function(target, pred){
-    loss = torch_mean(torch_sum(target*torch_log(target/(pred+1e-06)), dim = 1))
+    loss = torch_mean(torch_sum(target*torch_log(target/(pred+1e-06)), dim = 2))
     return(loss)
   },
   
   target_distribution = function(q){
-    p = q^2/torch_sum(q, dim = 0)
-    p = p/torch_sum(p, dim = 1, keepdim = TRUE)
+    p = q^2/torch_sum(q, dim = 1)
+    p = p/torch_sum(p, dim = 2, keepdim = TRUE)
     return(p)
   },
   
@@ -110,11 +107,11 @@ simple_GC_DEC <- nn_module(
       loss$backward()
       optmz$step()
       if (epoch%%trajectory_interval == 0){
-        self$trajectory = rbind(self$trajectory, as.array(torch_argmax(q, dim = 1)$data()$cpu()))
+        self$trajectory = rbind(self$trajectory, as.array(torch_argmax(q, dim = 2)$data()$cpu()))
       }
       
       # check stop criterion
-      y_pred = as.array(torch_argmax(q, dim =1)$data()$cpu())
+      y_pred = as.array(torch_argmax(q, dim = 2)$data()$cpu())
       delta.label = sum(y_pred != y_lastPred)/dim(X)[1]
       y_lastPred = y_pred
       if (epoch>0 && ((epoch-1)%%update_interval==0) && delta.label < tol){

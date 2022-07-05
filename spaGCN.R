@@ -6,8 +6,6 @@ library(torch)
 source("../models.R")
 
 
-####REVISE DIM IN TORCH
-
 spaGCN <- function(spaData, 
                    adj, 
                    num.pcs = 50, 
@@ -79,7 +77,7 @@ predict.spaGCN <- function(clf){
   mylist = clf$model$predict(clf$embed, clf$adj.exp)
   z = mylist$x
   q = mylist$q
-  y_pred = as.array(torch_max(z, dim = 1)$data()$cpu())
+  y_pred = as.array(torch_argmax(z, dim = 2)$data()$cpu())
   prob = as.array(q)
   mylist = list("y_pred" = y_pred, "prob" = prob)
   return(mylist)

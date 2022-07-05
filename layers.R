@@ -10,7 +10,7 @@ GraphConvolution <- nn_module(
     self$reset_parameters()
   },
   reset_parameters = function(){
-    stdv <- 1/sqrt(self$weight$size(1))
+    stdv <- 1/sqrt(self$weight$size(2))
     self$stdv <- stdv
     self$weight <- with_no_grad(self$weight$data()$uniform_(-stdv, stdv))
     if (!is.na(self$bias)) {

@@ -1,5 +1,6 @@
 source("../spaGCN.R")
 
+
 calculate.p <- function(adj, l){
   adj.exp <- exp(-1*(adj^2)/(2*(l^2)))
   p <- mean(apply(adj.exp, 1, sum))-1

@@ -119,14 +119,22 @@ dev.off()
 s <- 1
 # b parameter determines the area of each spot when extracting color intensity
 b <- 49*scale.fac
-adj <- calculate.adj.matrix(x=x_pixel, 
-                            y=y_pixel, 
+adj <- calculate.adj.matrix(x=x_array, 
+                            y=y_array, 
                             x_pixel=x_pixel, 
                             y_pixel=y_pixel, 
                             image=img.rgb, 
                             beta=b, 
                             alpha=s, 
                             histology=TRUE)
+# adj <- calculate.adj.matrix(x=x_pixel,
+#                             y=y_pixel,
+#                             x_pixel=x_pixel,
+#                             y_pixel=y_pixel,
+#                             image=img.rgb,
+#                             beta=b,
+#                             alpha=s,
+#                             histology=TRUE)
 # write.csv(adj, "adj.csv", row.names = FALSE, col.names = FALSE)
 
 # 2. Spatial domain detection
@@ -166,10 +174,44 @@ seed=100
 res <- search.res(spaData, adj, l, n.clusters, 
                   start = 0.7, step = 0.1, tol = 5e-3, lr = 0.05, 
                   max.epochs = 20, seed = seed)
+source("../spaGCN.R")
+# run clustering
+spa.clf <- spaGCN(spaData, adj, init.spa = TRUE, init = "louvain", res = res, tol = 5e-3, lr = 0.05, max.epochs = 200)
+spa.clf <- set_l(spa.clf, l)
+spa.clf <- train.spaGCN(spa.clf)
+spa.pred <- predict.spaGCN(spa.clf)
+spa.y_pred <- spa.pred$y_pred
+spa.prob <- spa.pred$prob
+spa.clf$spaData$spa.y_pred <- as.factor(spa.y_pred)
+# Do cluster refinement(optional)
+# shape = "hexagon" for Visium data, "square" for ST data
+adj.2d <- calculate.adj.matrix(x=x_array, y=y_array, histology = FALSE)
+refined.pred <- refine(sample_id = colnames(spaData), pred = spa.clf$spaData$spa.y_pred, 
+                       dis = adj.2d, shape = "hexagon")
+spa.clf$spaData$refined.pred <- as.factor(refined.pred)
+saveRDS(spa.clf$spaData, file = "results.spa.rds")
+spaData <- readRDS("results.spa.rds")
 
+# plot spatial domains
+plot_color <- c("#F56867","#FEB915","#C798EE","#59BE86","#7495D3","#D1D1D1","#6D1A9C","#15821E","#3A84E6","#997273","#787878","#DB4C6C","#9E7A7A","#554236","#AF5F3C","#93796C","#F9BD3F","#DAB370","#877F6C","#268785")
+num_cluster <- length(unique(spaData$spa.y_pred))
+colors <- plot_color[1:num_cluster]
+png("pred.png")
+plotSpots(spaData, annotate = "spa.y_pred",
+          palette = colors)
+dev.off()
+SplotDimRed(spaData, type = "PCA",
+            annotate = "spa.y_pred", palette = colors)
 
-
-
+# plot refined spatial domains
+num_cluster <- length(unique(spaData$refined.pred))
+colors <- plot_color[1:num_cluster]
+png("refined.pred.png")
+plotSpots(spaData, annotate = "refined.pred",
+          palette = colors)
+dev.off()
+SplotDimRed(spaData, type = "PCA",
+            annotate = "refined.pred", palette = colors)
 
 
 

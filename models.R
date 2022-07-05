@@ -147,23 +147,23 @@ simple_GC_DEC <- nn_module(
 
 
 
-# gc <- GraphConvolution(50,50)
-# features = gc(torch_tensor(embed), torch_tensor(adj.exp))
-# f = as.matrix(features)
-# 
-# 
-# set.seed(123) # just in case there are ties.
-# np <- NNGraphParam(k=10, cluster.fun="louvain", cluster.args = list(resolution=1.1))
-# np
-# graph.out <- clusterRows(f, np)
-# # plotUMAP(clf$spaData, colour_by=I(graph.out))
-# table(graph.out)
-# colLabels(clf$spaData) <- factor(graph.out)
-# library(ggspavis)
-# plotSpots(clf$spaData, annotate = "label", 
-#           palette = "libd_layer_colors")
-# plotDimRed(clf$spaData, type = "PCA", 
-#            annotate = "label", palette = "libd_layer_colors")
+gc <- GraphConvolution(50,50)
+features = gc(torch_tensor(embed), torch_tensor(adj.exp))
+f = as.matrix(features)
+
+
+set.seed(123) # just in case there are ties.
+np <- NNGraphParam(k=10, cluster.fun="louvain", cluster.args = list(resolution=1.0))
+np
+graph.out <- clusterRows(f, np)
+# plotUMAP(clf$spaData, colour_by=I(graph.out))
+table(graph.out)
+colLabels(spaData) <- factor(graph.out)
+library(ggspavis)
+plotSpots(spaData, annotate = "label",
+          palette = plot_color)
+SplotDimRed(spaData, type = "PCA",
+           annotate = "label", palette = "libd_layer_colors")
 # 
 # 
 # 

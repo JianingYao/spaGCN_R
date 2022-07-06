@@ -30,7 +30,7 @@ spaGCN <- function(spaData,
                  weight.decay = weight.decay, 
                  opt = opt, 
                  init.spa = init.spa,
-                 int = init,
+                 init = init,
                  n.neighbors = n.neighbors,
                  n.clusters = n.clusters,
                  res = res,
@@ -49,9 +49,9 @@ set_l <- function(spaGCN, l){
 }
 
 
-train.spaGCN <- function(clf) {
+train.spaGCN <- function(clf, seed) {
   stopifnot((dim(clf$spaData)[2] == dim(clf$adj)[1]) && (dim(clf$adj)[1]== dim(clf$adj)[2]))
-  set.seed(123)
+  set.seed(seed)
   # pca_data <- prcomp(t(logcounts(clf$spaData)), rank = 50, scale = TRUE)
   # reducedDims(clf$spaData) <- list(PCA = pca_data$x)
 
@@ -68,7 +68,7 @@ train.spaGCN <- function(clf) {
   clf$model$fit(embed, adj.exp, lr = clf$lr, max_epochs = clf$max.epochs, 
                 weight_decay = clf$weight.decay, opt = clf$opt, init_spa = clf$init.spa,
                 init = clf$init, n_neighbors = clf$n.neighbors, n_clusters = clf$n.clusters, 
-                res = clf$res, tol = clf$tol)
+                res = clf$res, tol = clf$tol, seed = seed)
   invisible(clf)
 }
 
@@ -77,7 +77,7 @@ predict.spaGCN <- function(clf){
   mylist = clf$model$predict(clf$embed, clf$adj.exp)
   z = mylist$x
   q = mylist$q
-  y_pred = as.array(torch_argmax(z, dim = 2)$data()$cpu())
+  y_pred = as.array(torch_argmax(q, dim = 2)$data()$cpu())
   prob = as.array(q)
   mylist = list("y_pred" = y_pred, "prob" = prob)
   return(mylist)

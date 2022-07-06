@@ -46,36 +46,33 @@ simple_GC_DEC <- nn_module(
                  res = 0.4, 
                  n_clusters = 10, 
                  init_spa = TRUE, 
-                 tol = 1e-03){
-    # TO REVISE INITIATING TRA
+                 tol = 1e-03, 
+                 seed = seed){
     self$trajectory = NULL
-    if (opt == "sgd"){
+    if (opt == "sgd") {
       optmz = optim_sgd(self$parameters, lr = lr, momentum = 0.9)
-    }
-    else if (opt == "admin"){
+    } else if (opt == "admin") {
       optmz = optim_adam(self$parameters, lr = lr, weight_decay = weight_decay)
     }
     
     features = self$gc(torch_tensor(X), torch_tensor(adj))
-    
-    if (init == "kmeans"){
+    if (init == "kmeans") {
       cat("Initializing cluster centers with kmeans, n_clusters known")
-    } 
-    else if (init == "louvain"){
+    } else if (init == "louvain") {
       cat("Initializing cluster centers with louvain, resolution = ", res)
-      if (init_spa){
+      if (init_spa) {
         mat = as.matrix(features)
-      }
-      else {
+      } else {
         mat = X
       }
-      set.seed(123)
-      np <- NNGraphParam(k=n_neighbors, cluster.fun = "louvain", cluster.args = list(resolution = res))
+      set.seed(seed)
+      np <- NNGraphParam(k = n_neighbors, cluster.fun = "louvain", cluster.args = list(resolution = res))
       y_pred <- clusterRows(mat, np)
       self$n_clusters <- length(unique(y_pred))
     }
     
     y_lastPred = y_pred
+    self$mu = NULL
     self$mu = nn_parameter(torch_empty(self$n_clusters, self$nhid))
     X = torch_tensor(X)
     adj = torch_tensor(adj)
@@ -86,21 +83,20 @@ simple_GC_DEC <- nn_module(
     Mergefeature = cbind(features, Group)
     cluster_centers = as.data.frame(Mergefeature %>% group_by(groups) %>% summarize_all(mean))
     cluster_centers$groups = NULL
-    
-    self$mu$data() = torch_tensor(as.matrix(cluster_centers))
+
+    self$mu$data()$copy_(torch_tensor(as.matrix(cluster_centers)))
     self$train(TRUE)
-    for (epoch in 1:max_epochs){
+    for (epoch in 0:(max_epochs-1)){
       if (epoch%%update_interval == 0){
         result = self$forward(X, adj)
         q = result$q
-        result1 = self$target_distribution(q)
-        p = result1$data()
+        p = self$target_distribution(q)$data()
       }
       if (epoch%%10==0){
         cat("Epoch ", epoch)
       }
       optmz$zero_grad()
-      result3 = self(X, adj)
+      result3 = self$forward(X, adj)
       z = result3$x
       q = result3$q
       loss = self$loss_function(p,q)
@@ -123,7 +119,7 @@ simple_GC_DEC <- nn_module(
     }
   },
   predict = function(X, adj){
-    mylist = self(torch_tensor(X), torch_tensor(adj))
+    mylist = self$forward(torch_tensor(X), torch_tensor(adj))
     # return value: forward: x, q
     return (mylist)
   }
@@ -144,23 +140,23 @@ simple_GC_DEC <- nn_module(
 
 
 
-gc <- GraphConvolution(50,50)
-features = gc(torch_tensor(embed), torch_tensor(adj.exp))
-f = as.matrix(features)
-
-
-set.seed(123) # just in case there are ties.
-np <- NNGraphParam(k=10, cluster.fun="louvain", cluster.args = list(resolution=1.0))
-np
-graph.out <- clusterRows(f, np)
-# plotUMAP(clf$spaData, colour_by=I(graph.out))
-table(graph.out)
-colLabels(spaData) <- factor(graph.out)
-library(ggspavis)
-plotSpots(spaData, annotate = "label",
-          palette = plot_color)
-SplotDimRed(spaData, type = "PCA",
-           annotate = "label", palette = "libd_layer_colors")
+# gc <- GraphConvolution(50,50)
+# features = gc(torch_tensor(embed), torch_tensor(adj.exp))
+# f = as.matrix(features)
+# 
+# 
+# set.seed(123) # just in case there are ties.
+# np <- NNGraphParam(k=10, cluster.fun="louvain", cluster.args = list(resolution=1.0))
+# np
+# graph.out <- clusterRows(f, np)
+# # plotUMAP(clf$spaData, colour_by=I(graph.out))
+# table(graph.out)
+# colLabels(spaData) <- factor(graph.out)
+# library(ggspavis)
+# plotSpots(spaData, annotate = "label",
+#           palette = plot_color)
+# plotDimRed(spaData, type = "PCA",
+#            annotate = "label", palette = "libd_layer_colors")
 # 
 # 
 # 

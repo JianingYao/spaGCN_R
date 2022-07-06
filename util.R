@@ -1,5 +1,5 @@
 source("../spaGCN.R")
-
+library(torch)
 
 calculate.p <- function(adj, l){
   adj.exp <- exp(-1*(adj^2)/(2*(l^2)))
@@ -55,25 +55,29 @@ search.l <- function(p, adj, start=0.01, end=1000, tol=0.01, max.run=100){
 
 search.res <- function(spaData, adj, l, target.num,
                        start = 0.4, step = 0.1, tol = 5e-3, lr = 0.05,
-                       max.epochs = 10, seed = 100, max.run = 10){
+                       max.epochs = 10, seed = seed, max.run = 10){
   set.seed(seed)
+  torch_manual_seed(seed)
   res <- start
   cat(paste0("Start at res = ", res, " step = ", step))
   clf <- spaGCN(spaData, adj, init.spa = TRUE, init = "louvain",
                 res = res, tol = tol, lr = lr, max.epochs = max.epochs)
+  clf
   clf <- set_l(clf, l)
-  clf <- train.spaGCN(clf)
+  clf <- train.spaGCN(clf, seed)
   pred <- predict.spaGCN(clf)
   y_pred <- pred$y_pred
   old.num <- length(unique(y_pred))
+  cat("Res = ", res, "Num of clusters = ", old.num)
   run <- 0
-  while (old.num != target_num) {
-    set.seed(100)
+  while (old.num != target.num) {
+    set.seed(seed)
+    torch_manual_seed(seed)
     old.sign <- ifelse(old.num < target.num, 1, -1)
     clf <- spaGCN(spaData, adj, init.spa = TRUE, init = "louvain",
                   res = res+step*old.sign, tol = tol, lr = lr, max.epochs = max.epochs)
     clf <- set_l(clf, l)
-    clf <- train.spaGCN(clf)
+    clf <- train.spaGCN(clf, seed)
     pred <- predict.spaGCN(clf)
     y_pred <- pred$y_pred
     new.num <- length(unique(y_pred))
@@ -82,6 +86,12 @@ search.res <- function(spaData, adj, l, target.num,
       res = res+step*old.sign
       cat("Recommended res = ", res)
       return(res)
+    } 
+    new.sign = ifelse(new.num < target.num, 1, -1)
+    if (new.sign == old.sign){
+      res = res+step*old.sign
+      cat("Res changed to ", res)
+      old.num = new.num
     } else {
       step = step/2
       cat("step changed to ", step)
@@ -114,7 +124,7 @@ refine <- function(sample_id, pred, dis, shape = "hexagon"){
     index = sample_id[i]
     dis_tmp = as.data.frame(cbind(dis_df[index],sample_id))
     dis_tmp = dis_tmp[order(dis_tmp[,1]),]
-    nbs = dis_tmp[0:num_nbs+1,]
+    nbs = dis_tmp[1:num_nbs+1,]
     nbs_pred = pred[nbs$sample_id,]
     self_pred = pred[index,]
     v_c = as.data.frame(table(nbs_pred))

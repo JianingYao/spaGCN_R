@@ -3,11 +3,12 @@ library(grid)
 library(SpatialExperiment)
 library(spatialLIBD)
 library(tiff)
-library(foreach)
-library(doParallel)
+# library(foreach)
+# library(doParallel)
 library(scran)
 library(scuttle)
 library(ggspavis)
+library(torch)
 source("../calculate_adj.R")
 
 ## Connect to ExperimentHub
@@ -80,25 +81,25 @@ y_array <- colData(spaData)$array_col
 x_pixel <- spatialCoords(spaData)[,2]*scale.fac
 y_pixel <- spatialCoords(spaData)[,1]*scale.fac
 
+
 # add rgb dimension
 # array: rgb*pcol*prow
 # after permutation:xp*yp*rgb
 img.rgb <- aperm(array(col2rgb(img), dim=c(3,ncol(img),nrow(img))),c(3,2,1))
-# img.rgb <- aperm(array(col2rgb(img), dim=c(3,ncol(img),nrow(img))),c(2,1,3))
-# img.rgb <- aperm(array(col2rgb(img[1:10,1:5]), dim=c(3,5,10)),c(2,1,3))
+# img.rgb <- aperm(array(col2rgb(img), dim=c(3,ncol(img),nrow(img))),c(2,3,1))
 
 
 # test coordinates on the image
-a <- as.integer(20*scale.fac)
-img.new <- img
-for (i in 1:length(x_pixel)){
-  x <- x_pixel[i]
-  y <- y_pixel[i]
-  img.new[as.integer(x-a):as.integer(x+a),as.integer(y-a):as.integer(y+a)]="#000000ff"
-}
-png("histology_map.png")
-plot(img.new)
-dev.off()
+# a <- as.integer(20*scale.fac)
+# img.new <- img
+# for (i in 1:length(x_pixel)){
+#   x <- x_pixel[i]
+#   y <- y_pixel[i]
+#   img.new[as.integer(x-a):as.integer(x+a),as.integer(y-a):as.integer(y+a)]="#000000ff"
+# }
+# png("histology_map.png")
+# plot(img.new)
+# dev.off()
 
 
 # img.rgb.new <- img.rgb
@@ -119,8 +120,8 @@ dev.off()
 s <- 1
 # b parameter determines the area of each spot when extracting color intensity
 b <- 49*scale.fac
-adj <- calculate.adj.matrix(x=x_array, 
-                            y=y_array, 
+adj <- calculate.adj.matrix(x=x_pixel, 
+                            y=y_pixel, 
                             x_pixel=x_pixel, 
                             y_pixel=y_pixel, 
                             image=img.rgb, 
@@ -158,7 +159,7 @@ spaData <- spaData[!is.mito,]
 # spaData <- logNormCounts(spaData)
 
   
-source("../util.R")  
+source("../util.R")
 # 2.2 Set hyper-parameters
 # p: Percentage of total expression contributed by neighborhoods; average relative contribution of other spots for one spot across all spots
 # l: Parameter to control p
@@ -172,13 +173,15 @@ n.clusters <- 7
 seed=100
 # Search for suitable resolution
 res <- search.res(spaData, adj, l, n.clusters, 
-                  start = 0.7, step = 0.1, tol = 5e-3, lr = 0.05, 
+                  start = 0.9, step = 0.1, tol = 5e-3, lr = 0.05, 
                   max.epochs = 20, seed = seed)
 source("../spaGCN.R")
 # run clustering
+set.seed(seed)
+torch_manual_seed(seed)
 spa.clf <- spaGCN(spaData, adj, init.spa = TRUE, init = "louvain", res = res, tol = 5e-3, lr = 0.05, max.epochs = 200)
 spa.clf <- set_l(spa.clf, l)
-spa.clf <- train.spaGCN(spa.clf)
+spa.clf <- train.spaGCN(spa.clf, seed)
 spa.pred <- predict.spaGCN(spa.clf)
 spa.y_pred <- spa.pred$y_pred
 spa.prob <- spa.pred$prob
@@ -200,7 +203,7 @@ png("pred.png")
 plotSpots(spaData, annotate = "spa.y_pred",
           palette = colors)
 dev.off()
-SplotDimRed(spaData, type = "PCA",
+plotDimRed(spaData, type = "PCA",
             annotate = "spa.y_pred", palette = colors)
 
 # plot refined spatial domains
@@ -210,7 +213,7 @@ png("refined.pred.png")
 plotSpots(spaData, annotate = "refined.pred",
           palette = colors)
 dev.off()
-SplotDimRed(spaData, type = "PCA",
+plotDimRed(spaData, type = "PCA",
             annotate = "refined.pred", palette = colors)
 
 

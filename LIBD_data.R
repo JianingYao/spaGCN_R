@@ -2,15 +2,20 @@ library(ggplot2)
 library(grid)
 library(SpatialExperiment)
 library(spatialLIBD)
-library(tiff)
+# library(tiff)
 # library(foreach)
 # library(doParallel)
 library(scran)
 library(scuttle)
 library(ggspavis)
 library(torch)
+library(raster)
 
-for (i in 120:150){
+c = c(100, 345, 700, 999, 12321)
+
+for (i in c){
+  seed = i
+  
 source("../calculate_adj.R")
 source("../util.R")
 source("../spaGCN.R")
@@ -38,8 +43,8 @@ source("../spaGCN.R")
 # )
 # 
 # saveRDS(spaData, file = "spaData-151507.rds")
-  sample.id <- "151507"
-  spaData <- readRDS("spaData-151507.rds")
+  sample.id <- "151673"
+  spaData <- readRDS("spaData-151673.rds")
   
   
   # url <- "https://spatial-dlpfc.s3.us-east-2.amazonaws.com/images/151673_full_image.tif"
@@ -56,12 +61,12 @@ source("../spaGCN.R")
   #                  sample_id = "151673",
   #                  image_id = "fullres")
   
-  img <- imgRaster(spaData,
-                   sample_id = sample.id,
-                   image_id = "lowres")
-  pdf("histology.pdf")
-  plot(img)
-  dev.off()
+  # img <- imgRaster(spaData,
+  #                  sample_id = sample.id,
+  #                  image_id = "lowres")
+  # pdf("histology.pdf")
+  # plot(img)
+  # dev.off()
   
   colnames(colData(spaData))
   
@@ -74,17 +79,21 @@ source("../spaGCN.R")
   scale.fac <- scaleFactors(spaData)
   x_array <- colData(spaData)$array_row
   y_array <- colData(spaData)$array_col
-  x_pixel <- spatialCoords(spaData)[, 2] * scale.fac
-  y_pixel <- spatialCoords(spaData)[, 1] * scale.fac
-  
+  # x_pixel <- spatialCoords(spaData)[, 2] * scale.fac
+  # y_pixel <- spatialCoords(spaData)[, 1] * scale.fac
+  x_pixel <- spatialCoords(spaData)[, 2]
+  y_pixel <- spatialCoords(spaData)[, 1]
   
   # add rgb dimension
   # array: rgb*pcol*prow
   # after permutation:xp*yp*rgb
-  img.rgb <-
-    aperm(array(col2rgb(img), dim = c(3, ncol(img), nrow(img))), c(3, 2, 1))
-  # img.rgb <- aperm(array(col2rgb(img), dim=c(3,ncol(img),nrow(img))),c(2,3,1))
-  
+  # img.rgb <-
+  #   aperm(array(col2rgb(img), dim = c(3, ncol(img), nrow(img))), c(3, 2, 1))
+  img <- brick(x = "histology.tif")
+  ext <- extent(img)
+  img.rgb <- raster::extract(img, ext)
+  img.rgb[, c(1,3)] <- img.rgb[, c(3,1)]
+  img.rgb <- aperm(`dim<-`(t(img.rgb), c(3, dim(img)[1], dim(img)[2])), c(3, 2, 1))
   
   # test coordinates on the image
   # a <- as.integer(20*scale.fac)
@@ -116,7 +125,8 @@ source("../spaGCN.R")
   # higher s: higher weights to histology
   s <- 1
   # b parameter determines the area of each spot when extracting color intensity
-  b <- 49 * scale.fac
+  # b <- 49 * scale.fac
+  b <- 49
   adj <- calculate.adj.matrix(
     x = x_pixel,
     y = y_pixel,
@@ -140,12 +150,12 @@ source("../spaGCN.R")
   per.gene <- perFeatureQCMetrics(spaData)
   libsize.drop <- isOutlier(per.cell$total, nmads = 3, type = "lower", log = TRUE)
   numcells <- nexprs(spaData, byrow = TRUE)
-  keep <- numcells >= 10
+  keep <- numcells >= 3
   spaData <- spaData[!(is.spike | is.mito), ]
   spaData <- spaData[keep, ]
-  spaData <- spaData[rowData(spaData)$gene_biotype == "protein_coding", ]
+  # spaData <- spaData[rowData(spaData)$gene_biotype == "protein_coding", ]
   #normalize and take log for UMI (exist in spatialLIBD??)
-  set.seed(100)
+  set.seed(seed)
   cluster <- quickCluster(spaData)
   spaData <- computeSumFactors(spaData, cluster=cluster, min.mean=0.1)
   spaData <- logNormCounts(spaData)
@@ -169,7 +179,6 @@ source("../spaGCN.R")
   # res: resolution in the initial Louvain's clustering methods. If the number of clusters is known, use search.res() function to search for suitable resolution
   # For 151673 slice, set the number of clusters = 7 since this tissue has 7 layers
   n.clusters <- 7
-  seed = i
   # Search for suitable resolution
   res <- search.res(
     spaData,
@@ -180,7 +189,7 @@ source("../spaGCN.R")
     step = 0.1,
     tol = 5e-3,
     lr = 0.05,
-    max.epochs = 20,
+    max.epochs = 100,
     seed = seed
   )
   # run clustering
@@ -195,7 +204,7 @@ source("../spaGCN.R")
       res = res,
       tol = 5e-3,
       lr = 0.05,
-      max.epochs = 500
+      max.epochs = 10000
     )
   spa.clf <- set_l(spa.clf, l)
   spa.clf <- train.spaGCN(spa.clf, seed)
@@ -244,7 +253,7 @@ source("../spaGCN.R")
     )
   num_cluster <- length(unique(spaData$spa.y_pred))
   colors <- plot_color[1:num_cluster]
-  pdf(file = paste0("pred_", seed, ".pdf"))
+  pdf(file = paste0("set_pred_", seed, ".pdf"))
   print(plotSpots(spaData, annotate = "spa.y_pred",
             palette = colors, size = 1))
   dev.off()
@@ -256,7 +265,7 @@ source("../spaGCN.R")
   # plot refined spatial domains
   num_cluster <- length(unique(spaData$refined.pred))
   colors <- plot_color[1:num_cluster]
-  pdf(file = paste0("refined.pred_", seed, ".pdf"))
+  pdf(file = paste0("set_refined.pred_", seed, ".pdf"))
   print(plotSpots(spaData, annotate = "refined.pred",
             palette = colors, size = 1))
   dev.off()
@@ -266,4 +275,9 @@ source("../spaGCN.R")
              palette = colors)
   rm(list=ls())
   gc()
+  c = c(100, 345, 700, 999, 12321)
 }
+
+
+
+

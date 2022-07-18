@@ -3,6 +3,7 @@ library(torch)
 
 GraphConvolution <- nn_module(
   initialize = function(in_features, out_features, bias=TRUE){
+    # torch_manual_seed(123)
     self$in_features = in_features
     self$out_features = out_features
     self$weight = nn_parameter(torch_empty(in_features, out_features))

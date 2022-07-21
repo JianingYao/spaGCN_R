@@ -14,23 +14,33 @@ GraphConvolution <- nn_module(
     stdv <- 1/sqrt(self$weight$size(2))
     self$stdv <- stdv
     self$weight <- with_no_grad(self$weight$data()$uniform_(-stdv, stdv))
-    if (!is.na(self$bias)) {
+    print("self$stdv is ")
+    print(self$stdv)
+    print("self$bias is")
+    print(self$bias)
+    print("self$weight is")
+    print(self$weight)
+    # if (!is.na(self$bias)) {
       self$bias <- with_no_grad(self$bias$data()$uniform_(-stdv, stdv))
-    }
+    # }
   },
   forward = function(input, adj){
     support <- torch_mm(input, self$weight)
     output <- torch_mm(adj, support)
-    if (!is.na(self$bias)){
+    # if (!is.na(self$bias)){
+      print("output+self$bias")
+      print(output+self$bias)
       return(output+self$bias)
-    }else {
-      return(output)
-    }
+    # }else {
+      # return(output)
+    # }
   }
 )
 
-
-
+# a = torch_tensor(matrix(c(1,2,3,4,5,6),nrow = 3))
+# b = torch_tensor(matrix(c(1,2,3,4,5,6,7,8,9),nrow = 3))
+# gc = GraphConvolution(2,2)
+# dec = gc(a,b)
 
 
 

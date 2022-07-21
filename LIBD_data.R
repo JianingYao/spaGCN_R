@@ -11,11 +11,12 @@ library(ggspavis)
 library(torch)
 library(raster)
 
-c = c(100, 345, 700, 999, 12321)
+c = c(100, 123, 345, 478, 763, 999, 5674, 12321)
 
 for (i in c){
   seed = i
-  
+
+sink("out-100(1).txt")
 source("../calculate_adj.R")
 source("../util.R")
 source("../spaGCN.R")
@@ -30,7 +31,7 @@ source("../spaGCN.R")
 # # Convert to a SpatialExperiment object
 # spe <- sce_to_spe(sce)
 # # subset a specific slice: "151507" "151508" "151509" "151510" "151669" "151670" "151671" "151672" "151673" "151674" "151675" "151676"
-# sample.id <- "151507"
+# sample.id <- "151673"
 # spe[,colData(spe)$sample_id == sample.id]
 # 
 # spaData <- spe[,colData(spe)$sample_id == sample.id]
@@ -41,10 +42,10 @@ source("../spaGCN.R")
 #   colors = libd_layer_colors,
 #   ... = " LIBD Layers"
 # )
-# 
-# saveRDS(spaData, file = "spaData-151507.rds")
+
+# saveRDS(spaData, file = "spaData-151673.rds")
   sample.id <- "151673"
-  spaData <- readRDS("spaData-151673.rds")
+  spaData <- readRDS(paste0("spaData-",sample.id,".rds"))
   
   
   # url <- "https://spatial-dlpfc.s3.us-east-2.amazonaws.com/images/151673_full_image.tif"
@@ -89,11 +90,15 @@ source("../spaGCN.R")
   # after permutation:xp*yp*rgb
   # img.rgb <-
   #   aperm(array(col2rgb(img), dim = c(3, ncol(img), nrow(img))), c(3, 2, 1))
-  img <- brick(x = "histology.tif")
-  ext <- extent(img)
-  img.rgb <- raster::extract(img, ext)
-  img.rgb[, c(1,3)] <- img.rgb[, c(3,1)]
-  img.rgb <- aperm(`dim<-`(t(img.rgb), c(3, dim(img)[1], dim(img)[2])), c(3, 2, 1))
+  
+  # full resolution
+  # img <- brick(x = "histology.tif")
+  # ext <- extent(img)
+  # img.rgb <- raster::extract(img, ext)
+  # img.rgb[, c(1,3)] <- img.rgb[, c(3,1)]
+  # img.rgb <- aperm(`dim<-`(t(img.rgb), c(3, dim(img)[1], dim(img)[2])), c(3, 2, 1))
+  # saveRDS(img.rgb, file = paste0("img.rgb-",sample.id,".rds"))
+  img.rgb <- readRDS(paste0("img.rgb-",sample.id,".rds"))
   
   # test coordinates on the image
   # a <- as.integer(20*scale.fac)
@@ -127,17 +132,18 @@ source("../spaGCN.R")
   # b parameter determines the area of each spot when extracting color intensity
   # b <- 49 * scale.fac
   b <- 49
-  adj <- calculate.adj.matrix(
-    x = x_pixel,
-    y = y_pixel,
-    x_pixel = x_pixel,
-    y_pixel = y_pixel,
-    image = img.rgb,
-    beta = b,
-    alpha = s,
-    histology = TRUE
-  )
-  
+  # browser()
+  # adj <- calculate.adj.matrix(
+  #   x = x_pixel,
+  #   y = y_pixel,
+  #   x_pixel = x_pixel,
+  #   y_pixel = y_pixel,
+  #   image = img.rgb,
+  #   beta = b,
+  #   alpha = s,
+  #   histology = TRUE
+  # )
+  adj <- as.matrix(read.csv("adj.csv", header = FALSE))
 
   # 2. Spatial domain detection
   # 2.1 Expression data processing
@@ -185,11 +191,11 @@ source("../spaGCN.R")
     adj,
     l,
     n.clusters,
-    start = 0.9,
+    start = 1.1,
     step = 0.1,
     tol = 5e-3,
     lr = 0.05,
-    max.epochs = 100,
+    max.epochs = 10,
     seed = seed
   )
   # run clustering
@@ -204,7 +210,7 @@ source("../spaGCN.R")
       res = res,
       tol = 5e-3,
       lr = 0.05,
-      max.epochs = 10000
+      max.epochs = 15
     )
   spa.clf <- set_l(spa.clf, l)
   spa.clf <- train.spaGCN(spa.clf, seed)
@@ -214,8 +220,10 @@ source("../spaGCN.R")
   spa.clf$spaData$spa.y_pred <- as.factor(spa.y_pred)
   # Do cluster refinement(optional)
   # shape = "hexagon" for Visium data, "square" for ST data
-  adj.2d <-
-    calculate.adj.matrix(x = x_array, y = y_array, histology = FALSE)
+  # adj.2d <-
+  #   calculate.adj.matrix(x = x_array, y = y_array, histology = FALSE)
+  adj.2d <- as.matrix(read.csv("adj.2d.csv", header = FALSE))
+  
   refined.pred <-
     refine(
       sample_id = colnames(spaData),
@@ -273,9 +281,10 @@ source("../spaGCN.R")
              type = "PCA",
              annotate = "refined.pred",
              palette = colors)
+  sink()
   rm(list=ls())
   gc()
-  c = c(100, 345, 700, 999, 12321)
+  c = c(100, 123, 345, 478, 763, 999, 5674, 12321)
 }
 
 

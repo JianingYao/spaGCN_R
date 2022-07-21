@@ -47,6 +47,7 @@ pairwise.distance <- function(X) {
 calculate.adj.matrix <- function(x, y, x_pixel = NULL, y_pixel = NULL, image = NULL,
                                  beta = 49*scale.fac, alpha = 1, histology = TRUE){
   # x, y, x_pixel, y_pixel are lists
+  # browser()
   if (histology == TRUE){
     stopifnot(!is.null(x_pixel) & !is.null(y_pixel) & !is.null(image))
     ######## WHY?
@@ -54,15 +55,16 @@ calculate.adj.matrix <- function(x, y, x_pixel = NULL, y_pixel = NULL, image = N
     cat("Calculating adj matrix using histology image...")
     # beta to control the range of neighborhood when calculate grey value for one spot
     # alpha to control the color scale
-    beta_half <- round(beta/2,3)
+    beta_half <- round(beta/2)
     g <- NULL
     for (i in 1:length(x_pixel)){
       max_x <- dim(image)[1]
       max_y <- dim(image)[2]
-      nbs <- image[max(0,round(x_pixel[i]-beta_half)):min(max_x, round(x_pixel[i]+beta_half+1)),
-                   max(0,round(y_pixel[i]-beta_half)):min(max_y, round(y_pixel[i]+beta_half+1)),]
+      # need to round x_pixel and y_pixel for calculating adj matrix for low or high resolution image
+      nbs <- image[max(1,x_pixel[i]-beta_half+1):min(max_x, x_pixel[i]+beta_half+1),
+                   max(1,y_pixel[i]-beta_half+1):min(max_y, y_pixel[i]+beta_half+1),]
       # create average rgb for each block
-      g <- rbind(g, apply(nbs,3,mean))
+      g <- rbind(g, apply(nbs,3,function(x) round(mean(x),8)))
     }
     
     var.r <- var.n(g[,1])

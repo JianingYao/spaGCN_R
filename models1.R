@@ -16,8 +16,6 @@ simple_GC_DEC <- nn_module(
   
   forward = function(x, adj){
     x = self$gc(x, adj)
-    print("x is")
-    print(x)
     q = 1/((1+torch_sum((x$unsqueeze(2)-self$mu)^2, dim = 3)/self$alpha) + 1e-08)
     q = q^(self$alpha+1)/2
     q = q/torch_sum(q, dim = 2, keepdim = TRUE)
@@ -28,8 +26,6 @@ simple_GC_DEC <- nn_module(
 
 loss_function = function(target, pred){
   loss = torch_mean(torch_sum(target*torch_log(target/(pred+1e-06)), dim = 2))
-  print("loss is")
-  print(loss)
   return(loss)
 }
   
@@ -63,8 +59,6 @@ fit.simple_GC_DEC = function(X,
   } else if (opt == "admin") {
     optmz = optim_adam(model$parameters, lr = lr, weight_decay = weight_decay)
   }
-  print("self$parameters is")
-  print(model$parameters)
   features = model$gc(torch_tensor(X), torch_tensor(adj))
   if (init == "kmeans") {
     cat("Initializing cluster centers with kmeans, n_clusters known")
@@ -84,8 +78,6 @@ fit.simple_GC_DEC = function(X,
   y_lastPred = y_pred
   model$mu = NULL
   model$mu = nn_parameter(torch_empty(model$n_clusters, model$nhid))
-  print("self$mu = nn_parameter(torch_empty(self$n_clusters, self$nhid)) is")
-  print(model$mu)
   X = torch_tensor(X)
   adj = torch_tensor(adj)
   model$trajectory = c(model$trajectory, y_lastPred)
@@ -96,42 +88,7 @@ fit.simple_GC_DEC = function(X,
   cluster_centers = as.data.frame(Mergefeature %>% group_by(groups) %>% summarize_all(mean))
   cluster_centers$groups = NULL
     
-  # print and save initialized clustering
-  plot_color <-
-    c(
-      "#F56867",
-      "#FEB915",
-      "#C798EE",
-      "#59BE86",
-      "#7495D3",
-      "#D1D1D1",
-      "#6D1A9C",
-      "#15821E",
-      "#3A84E6",
-      "#997273",
-      "#787878",
-      "#DB4C6C",
-      "#9E7A7A",
-      "#554236",
-      "#AF5F3C",
-      "#93796C",
-      "#F9BD3F",
-      "#DAB370",
-      "#877F6C",
-      "#268785"
-    )
-  colors <- plot_color[1:model$n_clusters]
-  print("self$n_clusters is ")
-  print(model$n_clusters)
-  colLabels(spaData) <- factor(y_lastPred)
-  pdf(file = paste0("0cluster_", seed, ".pdf"))
-  plotSpots(spaData, annotate = "label",
-              palette = colors, size = 1)
-  dev.off()
-    
   model$mu$data()$copy_(torch_tensor(as.matrix(cluster_centers)))
-  print("self$mu$data()$copy_(torch_tensor(as.matrix(cluster_centers))) is")
-  print(model$mu)
   model$train(TRUE)
   for (epoch in 0:(max_epochs-1)){
     if (epoch%%update_interval == 0){
@@ -164,11 +121,9 @@ fit.simple_GC_DEC = function(X,
       break
     }
   }
-  # return (model)
 }
 
 predict.simple_GC_DEC = function(X, adj, model){
-  print("PREDICTION TENSORS")
   mylist = model(torch_tensor(X), torch_tensor(adj))
   # return value: forward: x, q
   return (mylist)

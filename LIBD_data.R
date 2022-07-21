@@ -11,12 +11,12 @@ library(ggspavis)
 library(torch)
 library(raster)
 
-c = c(100, 123, 345, 478, 763, 999, 5674, 12321)
+c = c(763, 999, 5674, 12321)
 
 for (i in c){
   seed = i
 
-sink("out-100(1).txt")
+# sink("out-100(4).txt")
 source("../calculate_adj.R")
 source("../util.R")
 source("../spaGCN.R")
@@ -133,17 +133,18 @@ source("../spaGCN.R")
   # b <- 49 * scale.fac
   b <- 49
   # browser()
-  # adj <- calculate.adj.matrix(
-  #   x = x_pixel,
-  #   y = y_pixel,
-  #   x_pixel = x_pixel,
-  #   y_pixel = y_pixel,
-  #   image = img.rgb,
-  #   beta = b,
-  #   alpha = s,
-  #   histology = TRUE
-  # )
-  adj <- as.matrix(read.csv("adj.csv", header = FALSE))
+  source("../calculate_adj.R")
+  adj <- calculate.adj.matrix(
+    x = as.array(x_pixel),
+    y = as.array(y_pixel),
+    x_pixel = as.array(x_pixel),
+    y_pixel = as.array(y_pixel),
+    image = as.array(img.rgb),
+    beta = b,
+    alpha = s,
+    histology = TRUE
+  )
+  # adj <- as.matrix(read.csv("adj.csv", header = FALSE))
 
   # 2. Spatial domain detection
   # 2.1 Expression data processing
@@ -195,7 +196,7 @@ source("../spaGCN.R")
     step = 0.1,
     tol = 5e-3,
     lr = 0.05,
-    max.epochs = 10,
+    max.epochs = 100,
     seed = seed
   )
   # run clustering
@@ -210,7 +211,7 @@ source("../spaGCN.R")
       res = res,
       tol = 5e-3,
       lr = 0.05,
-      max.epochs = 15
+      max.epochs = 10000
     )
   spa.clf <- set_l(spa.clf, l)
   spa.clf <- train.spaGCN(spa.clf, seed)
@@ -220,9 +221,9 @@ source("../spaGCN.R")
   spa.clf$spaData$spa.y_pred <- as.factor(spa.y_pred)
   # Do cluster refinement(optional)
   # shape = "hexagon" for Visium data, "square" for ST data
-  # adj.2d <-
-  #   calculate.adj.matrix(x = x_array, y = y_array, histology = FALSE)
-  adj.2d <- as.matrix(read.csv("adj.2d.csv", header = FALSE))
+  adj.2d <-
+    calculate.adj.matrix(x = x_array, y = y_array, histology = FALSE)
+  # adj.2d <- as.matrix(read.csv("adj.2d.csv", header = FALSE))
   
   refined.pred <-
     refine(
@@ -281,10 +282,10 @@ source("../spaGCN.R")
              type = "PCA",
              annotate = "refined.pred",
              palette = colors)
-  sink()
+  # sink()
   rm(list=ls())
   gc()
-  c = c(100, 123, 345, 478, 763, 999, 5674, 12321)
+  c = c(763, 999, 5674, 12321)
 }
 
 

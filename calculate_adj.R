@@ -9,29 +9,9 @@ sd.n <- function(array) {
 }
 
 
-# pairwise.distance <- function(X) {
-#   # run for loop in parallel
-#   n.cores <- parallel::detectCores() - 1
-#   my.cluster <- parallel::makeCluster(
-#     n.cores,
-#     type = "PSOCK"
-#   )
-#   doParallel::registerDoParallel(cl = my.cluster)
-#   n <- nrow(X)
-#   adj <- 
-#     foreach(i=1:n, .combine = 'rbind') %:% 
-#     foreach(j=1:n, .combine = 'c') %dopar% (
-#       sqrt(sum((X[i,]-X[j,])^2))
-#     )
-#   parallel::stopCluster(cl = my.cluster)
-#   return(adj)
-# }
-
-# make symmetric matrix?
-# replace function dist
 pairwise.distance <- function(X) {
   n <- nrow(X)
-  adj <- matrix(,nrow = n, ncol=n)
+  adj <- matrix(rep(0, n*n),nrow = n, ncol=n)
   for (i in 1:n) {
     for (j in 1:n){
       adj[i,j] <- sqrt(sum((X[i,]-X[j,])^2))
@@ -40,17 +20,12 @@ pairwise.distance <- function(X) {
   return(adj)
 }
 
-# extract_color <- function(x_pixel = NULL, y_pixel = NULL, image = NULL, beta = 49) {
-#   
-# }
 
 calculate.adj.matrix <- function(x, y, x_pixel = NULL, y_pixel = NULL, image = NULL,
                                  beta = 49*scale.fac, alpha = 1, histology = TRUE){
   # x, y, x_pixel, y_pixel are lists
-  # browser()
   if (histology == TRUE){
     stopifnot(!is.null(x_pixel) & !is.null(y_pixel) & !is.null(image))
-    ######## WHY?
     stopifnot((length(x) == length(x_pixel)) & (length(y) == length(y_pixel)))
     cat("Calculating adj matrix using histology image...")
     # beta to control the range of neighborhood when calculate grey value for one spot
@@ -61,10 +36,18 @@ calculate.adj.matrix <- function(x, y, x_pixel = NULL, y_pixel = NULL, image = N
       max_x <- dim(image)[1]
       max_y <- dim(image)[2]
       # need to round x_pixel and y_pixel for calculating adj matrix for low or high resolution image
-      nbs <- image[max(1,x_pixel[i]-beta_half+1):min(max_x, x_pixel[i]+beta_half+1),
-                   max(1,y_pixel[i]-beta_half+1):min(max_y, y_pixel[i]+beta_half+1),]
+      # pixel starts with 0
+      first1 = as.character(max(1,x_pixel[i]-beta_half+1))
+      first2 = as.character(min(max_x, x_pixel[i]+beta_half+1))
+      second1 = as.character(max(1,y_pixel[i]-beta_half+1))
+      second2 = as.character(min(max_y, y_pixel[i]+beta_half+1))
+      a = as.numeric(first1)
+      b = as.numeric(first2)
+      c = as.numeric(second1)
+      d = as.numeric(second2)
+      nbs <- image[a:b, c:d,]
       # create average rgb for each block
-      g <- rbind(g, apply(nbs,3,function(x) round(mean(x),8)))
+      g <- rbind(g, apply(nbs,3,mean))
     }
     
     var.r <- var.n(g[,1])

@@ -3,7 +3,7 @@ library(scater)
 library(bluster)
 library(torch)
 
-source("../models.R")
+source("../models1.R")
 
 
 spaGCN <- function(spaData, 
@@ -52,11 +52,9 @@ set_l <- function(spaGCN, l){
 train.spaGCN <- function(clf, seed) {
   stopifnot((dim(clf$spaData)[2] == dim(clf$adj)[1]) && (dim(clf$adj)[1]== dim(clf$adj)[2]))
   set.seed(seed)
-  # pca_data <- prcomp(t(logcounts(clf$spaData)), rank = 50, scale = TRUE)
-  # reducedDims(clf$spaData) <- list(PCA = pca_data$x)
-
   clf$spaData <- runPCA(clf$spaData, exprs_values = "logcounts", ncomponents = 50,scale = TRUE)
   embed <- reducedDim(clf$spaData, "PCA")
+  embed <- as.matrix(read.csv("embed.csv", header = FALSE))
   clf$embed <- embed
   if (is.null(clf$l)){
     stop("l should be set before fitting the model")
@@ -65,16 +63,16 @@ train.spaGCN <- function(clf, seed) {
   clf$adj.exp <- adj.exp
   # train model
   clf$model=simple_GC_DEC(dim(embed)[2], dim(embed)[2])
-  clf$model$fit(embed, adj.exp, lr = clf$lr, max_epochs = clf$max.epochs, 
+  fit.simple_GC_DEC(embed, adj.exp, lr = clf$lr, max_epochs = clf$max.epochs, 
                 weight_decay = clf$weight.decay, opt = clf$opt, init_spa = clf$init.spa,
                 init = clf$init, n_neighbors = clf$n.neighbors, n_clusters = clf$n.clusters, 
-                res = clf$res, tol = clf$tol, seed = seed)
+                res = clf$res, tol = clf$tol, seed = seed, spaData = clf$spaData, model = clf$model)
   invisible(clf)
 }
 
 
 predict.spaGCN <- function(clf){
-  mylist = clf$model$predict(clf$embed, clf$adj.exp)
+  mylist = predict.simple_GC_DEC(clf$embed, clf$adj.exp, clf$model)
   z = mylist$x
   q = mylist$q
   y_pred = as.array(torch_argmax(q, dim = 2)$data()$cpu())

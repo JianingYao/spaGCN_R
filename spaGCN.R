@@ -54,7 +54,6 @@ train.spaGCN <- function(clf, seed) {
   set.seed(seed)
   clf$spaData <- runPCA(clf$spaData, exprs_values = "logcounts", ncomponents = 50,scale = TRUE)
   embed <- reducedDim(clf$spaData, "PCA")
-  embed <- as.matrix(read.csv("embed.csv", header = FALSE))
   clf$embed <- embed
   if (is.null(clf$l)){
     stop("l should be set before fitting the model")
@@ -64,9 +63,9 @@ train.spaGCN <- function(clf, seed) {
   # train model
   clf$model=simple_GC_DEC(dim(embed)[2], dim(embed)[2])
   fit.simple_GC_DEC(embed, adj.exp, lr = clf$lr, max_epochs = clf$max.epochs, 
-                weight_decay = clf$weight.decay, opt = clf$opt, init_spa = clf$init.spa,
-                init = clf$init, n_neighbors = clf$n.neighbors, n_clusters = clf$n.clusters, 
-                res = clf$res, tol = clf$tol, seed = seed, spaData = clf$spaData, model = clf$model)
+                    weight_decay = clf$weight.decay, opt = clf$opt, init_spa = clf$init.spa,
+                    init = clf$init, n_neighbors = clf$n.neighbors, n_clusters = clf$n.clusters, 
+                    res = clf$res, tol = clf$tol, seed = seed, spaData = clf$spaData, model = clf$model)
   invisible(clf)
 }
 
@@ -80,6 +79,8 @@ predict.spaGCN <- function(clf){
   mylist = list("y_pred" = y_pred, "prob" = prob)
   return(mylist)
 }
+
+
   
 
 

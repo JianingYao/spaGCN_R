@@ -138,18 +138,3 @@ refine <- function(sample_id, pred, dis, shape = "hexagon"){
 }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

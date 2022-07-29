@@ -28,31 +28,31 @@ loss_function = function(target, pred){
   loss = torch_mean(torch_sum(target*torch_log(target/(pred+1e-06)), dim = 2))
   return(loss)
 }
-  
+
 target_distribution = function(q){
   p = q^2/torch_sum(q, dim = 1)
   p = p/torch_sum(p, dim = 2, keepdim = TRUE)
   return(p)
 }
-  
+
 fit.simple_GC_DEC = function(X,
-               adj,
-               lr = 0.001,
-               max_epochs = 5000,
-               update_interval = 3,
-               trajectory_interval = 50,
-               weight_decay = 5e-04,
-               opt = "sgd",
-               init = "louvain",
-               n_neighbors = 10,
-               res = 0.4,
-               n_clusters = 10,
-               init_spa = TRUE,
-               tol = 1e-03,
-               seed = seed,
-               spaData = spaData,
-               model = model
-              ){
+                             adj,
+                             lr = 0.001,
+                             max_epochs = 5000,
+                             update_interval = 3,
+                             trajectory_interval = 50,
+                             weight_decay = 5e-04,
+                             opt = "sgd",
+                             init = "louvain",
+                             n_neighbors = 10,
+                             res = 0.4,
+                             n_clusters = 10,
+                             init_spa = TRUE,
+                             tol = 1e-03,
+                             seed = seed,
+                             spaData = spaData,
+                             model = model
+){
   model$trajectory = NULL
   if (opt == "sgd") {
     optmz = optim_sgd(model$parameters, lr = lr, momentum = 0.9)
@@ -62,6 +62,24 @@ fit.simple_GC_DEC = function(X,
   features = model$gc(torch_tensor(X), torch_tensor(adj))
   if (init == "kmeans") {
     cat("Initializing cluster centers with kmeans, n_clusters known")
+    model$n_clusters <- n_clusters
+    if (init_spa) {
+      mat = as.matrix(features)
+    } else {
+      mat = X
+    }
+    set.seed(seed)
+    y_pred <- clusterRows(mat, KmeansParam(7))
+  } else if (init == "mbkmeans") {
+    cat("Initializing cluster centers with mini-batch kmeans, n_clusters known")
+    model$n_clusters <- n_clusters
+    if (init_spa) {
+      mat = as.matrix(features)
+    } else {
+      mat = X
+    }
+    set.seed(seed)
+    y_pred <- clusterRows(mat, bluster::MbkmeansParam(7))
   } else if (init == "louvain") {
     cat("Initializing cluster centers with louvain, resolution = ", res)
     if (init_spa) {
@@ -74,7 +92,7 @@ fit.simple_GC_DEC = function(X,
     y_pred <- clusterRows(mat, np)
     model$n_clusters <- length(unique(y_pred))
   }
-    
+  
   y_lastPred = y_pred
   model$mu = NULL
   model$mu = nn_parameter(torch_empty(model$n_clusters, model$nhid))
@@ -87,7 +105,7 @@ fit.simple_GC_DEC = function(X,
   Mergefeature = cbind(features, Group)
   cluster_centers = as.data.frame(Mergefeature %>% group_by(groups) %>% summarize_all(mean))
   cluster_centers$groups = NULL
-    
+  
   model$mu$data()$copy_(torch_tensor(as.matrix(cluster_centers)))
   model$train(TRUE)
   for (epoch in 0:(max_epochs-1)){
@@ -109,7 +127,7 @@ fit.simple_GC_DEC = function(X,
     if (epoch%%trajectory_interval == 0){
       model$trajectory = rbind(model$trajectory, as.array(torch_argmax(q, dim = 2)$data()$cpu()))
     }
-      
+    
     # check stop criterion
     y_pred = as.array(torch_argmax(q, dim = 2)$data()$cpu())
     delta.label = sum(y_pred != y_lastPred)/dim(X)[1]
@@ -128,6 +146,8 @@ predict.simple_GC_DEC = function(X, adj, model){
   # return value: forward: x, q
   return (mylist)
 }
+
+
 
 
 

@@ -108,6 +108,11 @@ search.res <- function(spaData, adj, l, target.num,
 }
 
 
+## refine function for spatial domain detection: relabel the spot if more than half of the surrounding spots are assigned differently
+## sample_id: column names of spe object
+## pred: cluster predictions 
+## dis: distance matrix computed from spatial coordinates 
+## shape: 'hexagon' for Visium data, 'square' for ST data
 refine <- function(sample_id, pred, dis, shape = "hexagon"){
   refined.pred = NULL
   pred = as.data.frame(pred, row.names = sample_id)
